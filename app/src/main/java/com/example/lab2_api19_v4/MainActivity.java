@@ -12,6 +12,7 @@ import android.net.Uri;
 import android.os.Bundle;
 import android.os.Environment;
 import android.provider.MediaStore;
+import android.util.Log;
 import android.view.KeyEvent;
 import android.view.View;
 import android.view.inputmethod.CompletionInfo;
@@ -33,17 +34,30 @@ import java.util.List; //WM
 
 public class MainActivity extends AppCompatActivity {
     static final int REQUEST_IMAGE_CAPTURE = 1;
+    public static final int SEARCH_ACTIVITY_REQUEST_CODE = 0;
     //public static final String EXTRA_MESSAGE = "com.example.lab2_api19_v4.MESSAGE";
     String mCurrentPhotoPath;
 
     //Values associated with saving the caption. WM
     String currentFileName = null; //similar to mCurrentPhotoPath, but the filename only. WM
     List captionList = new ArrayList(); //contains all the captions. WM
+    List filter_captionList = new ArrayList();
     List filenameList = new ArrayList(); //contains all the filenames. WM
     // These two lists should always be the same size. WM
     int currentElement = 0; //The element number of the current image. WM
 
+    Date CurrentDate = null;
+    List dateList = new ArrayList<Date>();
+
+    private void displayPhoto(String path) {
+        ImageView iv = (ImageView) findViewById(R.id.ivGallery);
+        iv.setImageBitmap(BitmapFactory.decodeFile(path));
+    }
+
     @Override
+    public void onResume() {
+        super.onResume();
+    }
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
         setContentView(R.layout.activity_main);
@@ -54,7 +68,7 @@ public class MainActivity extends AppCompatActivity {
         //EditText editText = (EditText) findViewById(R.id.editText);
         //String message = editText.getText().toString();
         //intent.putExtra(EXTRA_MESSAGE, message);
-        startActivity(intent);
+        startActivityForResult(intent, SEARCH_ACTIVITY_REQUEST_CODE);
     }
 
     public void takePicture(View v) {   //changed from private to public WM ----------------
@@ -82,26 +96,67 @@ public class MainActivity extends AppCompatActivity {
         File storageDir = getExternalFilesDir(Environment.DIRECTORY_PICTURES);
         File image = File.createTempFile(imageFileName, ".jpg",storageDir);
         mCurrentPhotoPath = image.getAbsolutePath();
+        Log.d("createImageFile", mCurrentPhotoPath);
         currentFileName = image.getName(); //Added WM to get the filename
+        CurrentDate = new Date(image.lastModified());
         return image;
     }
 
 
     @Override
     protected void onActivityResult(int requestCode, int resultCode, Intent data) {
+
         if (requestCode == REQUEST_IMAGE_CAPTURE && resultCode == RESULT_OK) {
             ImageView mImageView = (ImageView) findViewById(R.id.ivGallery);
             mImageView.setImageBitmap(BitmapFactory.decodeFile(mCurrentPhotoPath));
             //Add the image to the list immediately with the default caption "Enter Caption". WM
             filenameList.add(currentFileName);
             captionList.add("Enter Caption");
+            dateList.add(CurrentDate);
             //Change the current element to the new image. WM
             currentElement = filenameList.size() - 1;
             //Display the caption for the current image. WM
             TextView textView = (TextView) findViewById(R.id.editTextCaption);
             textView.setText((CharSequence) captionList.get(currentElement));
+
+            TextView textViewforDate = findViewById(R.id.DatetextView);
+            textViewforDate.setText((CharSequence) dateList.get(currentElement).toString());
+
+        }
+        if (requestCode == SEARCH_ACTIVITY_REQUEST_CODE){
+            if (resultCode == RESULT_OK)
+            {
+                File file = new File(Environment.getExternalStorageDirectory()
+                        .getAbsolutePath(), "/Android/data/com.example.lab2_api19_v4/files/Pictures");
+                String get_caption = data.getStringExtra("CAPTION");
+                File[] fList = file.listFiles();
+                int cap_index = 0;
+                filenameList.clear();
+
+                for (File f : file.listFiles()) {
+                    if (captionList.get(cap_index).toString().contains(get_caption)) {
+                        filenameList.add(f.getName());
+                        filter_captionList.add(captionList.get(cap_index).toString());
+                    }
+                    cap_index++;
+                }
+                captionList.clear();
+                captionList = filter_captionList;
+                currentElement = 0;
+                mCurrentPhotoPath = getExternalFilesDir(Environment.DIRECTORY_PICTURES) + "/" + filenameList.get(currentElement).toString();
+                currentFileName = filenameList.get(currentElement).toString();
+                ImageView mImageView = (ImageView) findViewById(R.id.ivGallery);
+                mImageView.setImageBitmap(BitmapFactory.decodeFile(mCurrentPhotoPath));
+                TextView textView = (TextView) findViewById(R.id.editTextCaption);
+                textView.setText((CharSequence) captionList.get(currentElement));
+
+                TextView textViewforDate = findViewById(R.id.DatetextView);
+                textViewforDate.setText((CharSequence) dateList.get(currentElement).toString());
+                int test_i = 0;
+            }
         }
     }
+
 
     //Saves the caption. WM
     //Currently the captions are not saved when the program closes.
@@ -183,6 +238,10 @@ public class MainActivity extends AppCompatActivity {
                 //Display the caption for the current image.
                 TextView textView = (TextView) findViewById(R.id.editTextCaption);
                 textView.setText((CharSequence) captionList.get(currentElement));
+
+
+                TextView textViewforDate = findViewById(R.id.DatetextView);
+                textViewforDate.setText((CharSequence) dateList.get(currentElement).toString());
             }
         }
         j = 1;
@@ -227,6 +286,10 @@ public class MainActivity extends AppCompatActivity {
                 //Display the caption for the current image.
                 TextView textView = (TextView) findViewById(R.id.editTextCaption);
                 textView.setText((CharSequence) captionList.get(currentElement));
+
+
+                TextView textViewforDate = findViewById(R.id.DatetextView);
+                textViewforDate.setText((CharSequence) dateList.get(currentElement).toString());
             }
         }
         j = 2;
